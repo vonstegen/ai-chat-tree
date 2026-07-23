@@ -1,0 +1,16 @@
+[project]
+name = "ai-chat-tree-engine"
+version = "0.1.0"
+description = "AI Chat Tree Engine — MVP with vault operations, embeddings, and vector search"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+]
+
+[project.scripts]
+act = "ai_chat_tree:main"
+
+[tool.uv]
+dev-dependencies = []
