@@ -48,13 +48,17 @@ Resolve these first. Each one gates work downstream.
   - Leaning: nomic-embed-text (Ollama-native, solid on code + prose)
   - Blocks: Phase 3
 
-- [ ] **D-004: RLM orchestration framework** — LangGraph vs. custom minimal scaffold vs. existing `rlm` library
+|- [ ] **D-004: RLM orchestration framework** — LangGraph vs. custom minimal scaffold vs. existing `rlm` library
   - Leaning: Custom minimal scaffold (avoid framework bloat, retain debug transparency)
   - Blocks: Phase 2
 
-- [ ] **D-005: LLM routing layer** — LiteLLM vs. direct provider SDKs
+|- [ ] **D-005: LLM routing layer** — LiteLLM vs. direct provider SDKs
   - Leaning: LiteLLM (cleanest multi-provider abstraction)
   - Blocks: Phase 2
+
+|- [ ] **D-011: Guardian integration path** — Python mirroring vs. TypeScript invocation via pi-infra
+  - Leaning: Python mirroring (faster path to enforcement), migrate to TypeScript when pi-infra is active runtime
+  - Blocks: Phase 1
 
 - [x] **D-006: Primary language for core** — ✅ **RESOLVED: TypeScript + Python hybrid (HTTP IPC)**
   - TypeScript: Obsidian plugin UI layer
@@ -312,19 +316,25 @@ Minimum viable demo that proves the architecture:
 
 ## 🧭 Next Actions (this session / next)
 
-**2026-06-22 — VIGIL Session (Logician Integration)**
-- [x] Created `docs/PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md`
-- [x] Updated `README.md` with new direction
-- [x] Built Phase 0.5 Prototype:
-  - `ai-chat-tree-engine/core/node.py` (strict immutable TurnNode)
-  - `ai-chat-tree-engine/core/logician_bridge.py` (Vigil Logician v3 integration)
-  - First turn creation with pre/post validation
-- [ ] Run prototype to create Turn-001.md via Logician
-- [ ] Review prototype in morning (Logician integration quality, schema, Honcho synergy)
+**2026-07-24 — VIGIL Session (Guardian Integration Review)**
+- [x] Audit of original "Logician v3" claims vs. reality done
+- [x] Identified Logician → Guardian rename (Guardian is pi-infra's canonical term)
+- [x] Created `docs/PROPOSED-GUARDIAN-INTEGRATION.md` — accurate inventory of what exists, what pi-infra ships, recommended architecture
+- [x] Updated `README.md` — replaced Logician v3 references with Guardian/pi-infra architecture
+- [x] Added D-011 to decision table (Guardian integration path)
+- [ ] Replace stub `logician_bridge.py` with real Guardian bridge
+- [ ] Rename `logician_hash` field to `guardian_hash`
+- [ ] Update `Turn-001.md` frontmatter with `guardian_hash`
+- [ ] Core review of `PROPOSED-GUARDIAN-INTEGRATION.md` before merge
+- [ ] Decide: Python mirroring vs. TypeScript invocation of Guardian
+
+**2026-06-22 — Original Logician Prototype (superseded)**
+- [ ] Run prototype to create Turn-001.md via Guardian
+- [ ] Review prototype in morning (Guardian integration quality, schema, Honcho synergy)
 - [ ] Decide on vector DB (sqlite-vec remains leading candidate)
 - [ ] Create `docs/rlm-system-prompts.md`
 
-**Original Phase 0 items remain valid but now gated behind Logician enforcement.**
+**Original Phase 0 items remain valid but now gated behind Guardian enforcement.**
 
 ---
 
