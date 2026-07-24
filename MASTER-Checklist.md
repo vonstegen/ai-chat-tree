@@ -32,33 +32,31 @@ This is a **living document**. It grows with the project and is the single sourc
 
 ## 🎯 Critical Decisions Pending (Unblockers)
 
-Resolve these first. Each one gates work downstream.
-
 - [x] **D-001: Execution environment** — ✅ **RESOLVED: Option C′ (Plugin + Python engine)**
   - Plugin: thin TypeScript HTTP client for Obsidian
   - Engine: `ai-chat-tree-engine` — Python/FastAPI service (sqlite-vec, RLM, embeddings)
   - Split: TS plugin shell + Python sidecar via HTTP IPC
   - Blocks: none — unblocked Phase 1+
 
-- [ ] **D-002: Vector DB backend** — sqlite-vec vs. DuckDB+VSS vs. LanceDB vs. Chroma
-  - Leaning: sqlite-vec (single-file, WASM-friendly, zero-config)
-  - Blocks: Phase 3
+- [x] **D-002: Vector DB backend** — **RESOLVED: sqlite-vec**
+  - Single-file, zero-config, WASM-friendly
+  - Blocks: none
 
-- [ ] **D-003: Default embedding model** — nomic-embed-text vs. bge-small-en vs. other
-  - Leaning: nomic-embed-text (Ollama-native, solid on code + prose)
-  - Blocks: Phase 3
+- [x] **D-003: Default embedding model** — **RESOLVED: nomic-embed-text**
+  - Ollama-native, solid on code + prose
+  - Blocks: none
 
-|- [ ] **D-004: RLM orchestration framework** — LangGraph vs. custom minimal scaffold vs. existing `rlm` library
-  - Leaning: Custom minimal scaffold (avoid framework bloat, retain debug transparency)
-  - Blocks: Phase 2
+- [x] **D-004: RLM orchestration framework** — **RESOLVED: Custom minimal scaffold**
+  - Avoid framework bloat, retain debug transparency
+  - Blocks: none
 
-|- [ ] **D-005: LLM routing layer** — LiteLLM vs. direct provider SDKs
-  - Leaning: LiteLLM (cleanest multi-provider abstraction)
-  - Blocks: Phase 2
+- [x] **D-005: LLM routing layer** — **RESOLVED: LiteLLM**
+  - Cleanest multi-provider abstraction
+  - Blocks: none
 
-|- [ ] **D-011: Guardian integration path** — Python mirroring vs. TypeScript invocation via pi-infra
-  - Leaning: Python mirroring (faster path to enforcement), migrate to TypeScript when pi-infra is active runtime
-  - Blocks: Phase 1
+- [x] **D-011: Guardian integration path** — **RESOLVED: Python mirroring**
+  - Faster path to enforcement; migrate to TypeScript when pi-infra is active runtime
+  - Blocks: none
 
 - [x] **D-006: Primary language for core** — ✅ **RESOLVED: TypeScript + Python hybrid (HTTP IPC)**
   - TypeScript: Obsidian plugin UI layer
@@ -66,18 +64,20 @@ Resolve these first. Each one gates work downstream.
   - HTTP boundary between plugin and engine
   - Blocks: none
 
-- [ ] **D-007: Repo license** — MIT confirmed?
-  - Leaning: MIT
+- [x] **D-007: Repo license** — **RESOLVED: MIT**
+  - Blocks: none
 
-- [ ] **D-008: Fruit storage** — per-turn `Turn-XXX-fruits/` subfolder vs. global `Assets/` folder with wikilinks
-  - Leaning: Per-turn subfolder (matches architecture.md)
-  - Blocks: Phase 1 file operations
+- [x] **D-008: Fruit storage** — **RESOLVED: Per-turn `Turn-XXX-fruits/` subfolder**
+  - Matches architecture.md, keeps fruits collocated with turns
+  - Blocks: none
 
-- [ ] **D-009: Local LLM default** — Ollama vs. LM Studio vs. Jan.ai as recommended runtime
-  - Leaning: Ollama (most mature, scriptable)
+- [x] **D-009: Local LLM default** — **RESOLVED: Ollama**
+  - Most mature, scriptable, widely adopted
+  - Blocks: none
 
-- [ ] **D-010: Revision strategy** — inline revision node vs. branch-per-revision
-  - Leaning: Inline linked revision node (lighter, preserves branch semantics)
+- [x] **D-010: Revision strategy** — **RESOLVED: Inline linked revision node**
+  - Lighter weight, preserves branch semantics
+  - Blocks: none
 
 ---
 
