@@ -1,0 +1,11 @@
+{
+  "id": "ai-chat-tree",
+  "name": "AI Chat Tree",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "Structured conversation tree with RLM, vector search, and fruits.",
+  "author": "von Stegen",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}

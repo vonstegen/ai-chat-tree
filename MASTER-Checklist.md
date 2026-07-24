@@ -312,13 +312,19 @@ Minimum viable demo that proves the architecture:
 
 ## 🧭 Next Actions (this session / next)
 
-1. ~~Resolve D-001~~ — ✅ RESOLVED (Option C′)
-2. ~~Resolve D-006~~ — ✅ RESOLVED (TS + Python hybrid)
-3. Create `docs/rlm-system-prompts.md` — the RLM prompt templates
-4. Set up project structure for `ai-chat-tree-engine` (Python) and `ai-chat-tree-obsidian` (plugin)
-5. Create `LICENSE` (MIT)
-6. Create `CHANGELOG.md`
-7. Initialize GitHub repo and push first commit
+**2026-06-22 — VIGIL Session (Logician Integration)**
+- [x] Created `docs/PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md`
+- [x] Updated `README.md` with new direction
+- [x] Built Phase 0.5 Prototype:
+  - `ai-chat-tree-engine/core/node.py` (strict immutable TurnNode)
+  - `ai-chat-tree-engine/core/logician_bridge.py` (Vigil Logician v3 integration)
+  - First turn creation with pre/post validation
+- [ ] Run prototype to create Turn-001.md via Logician
+- [ ] Review prototype in morning (Logician integration quality, schema, Honcho synergy)
+- [ ] Decide on vector DB (sqlite-vec remains leading candidate)
+- [ ] Create `docs/rlm-system-prompts.md`
+
+**Original Phase 0 items remain valid but now gated behind Logician enforcement.**
 
 ---
 

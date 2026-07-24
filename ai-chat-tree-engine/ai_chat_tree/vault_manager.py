@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePath
 from typing import Dict, Generator, List, Optional, Tuple
 
-from .model import Turno, Brancho, Fruito, Trunoo, Node, new_id
+from .model import Turno, Brancho, Fruito, Trunko, Node, new_id
 
 
 class VaultManager:
@@ -58,8 +58,8 @@ class VaultManager:
 
     # ─── Public mutation interface ────────────────────────
 
-    def create_trunoo(self, name: str, description: str = "") -> Trunoo:
-        t = Trunoo(id=new_id("trunk"), name=name, description=description)
+    def create_trunoo(self, name: str, description: str = "") -> Trunko:
+        t = Trunko(id=new_id("trunk"), name=name, description=description)
         path = self.trunoo_dir() / f"{t.id}.md"
         path.write_text(t.to_markdown())
         return t
@@ -112,8 +112,8 @@ class VaultManager:
             node = Brancho.from_markdown(content)
         elif node_cls == Fruito:
             node = Fruito.from_markdown(content)
-        elif node_cls == Trunoo:
-            node = Trunoo.from_markdown(content)
+        elif node_cls == Trunko:
+            node = Trunko.from_markdown(content)
         else:
             raise ValueError(f"Unknown node type for {node_id}")
         for k, v in kwargs.items():
@@ -231,7 +231,7 @@ class VaultManager:
         m = re.search(r"^type:\s+(\w+)", content, re.MULTILINE)
         if m:
             type_map = {
-                "trunoo": Trunoo, "brancho": Brancho,
+                "trunoo": Trunko, "brancho": Brancho,
                 "turno": Turno, "fruits": Fruito,
             }
             return type_map.get(m.group(1), Turno)
@@ -245,7 +245,7 @@ class VaultManager:
             raise ValueError("No type field in content")
         node_type = m.group(1)
         factory = {
-            "trunoo": Trunoo.from_markdown,
+            "trunoo": Trunko.from_markdown,
             "brancho": Brancho.from_markdown,
             "turno": Turno.from_markdown,
             "fruits": Fruito.from_markdown,

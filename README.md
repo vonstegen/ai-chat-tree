@@ -1,35 +1,49 @@
 # AI Chat Tree 🌳
-Version-02
+**Version-02 + Logician Integration**
 
-**An Obsidian-native, node-centric, branching AI conversation system with Recursive Language Model (RLM) capabilities.**
+An Obsidian-native, node-centric, branching AI conversation system with **Vigil Logician v3.0** enforcement.
 
-The ultimate structured alternative to linear LLM chats — built for vibe coding, long-term memory, and non-linear exploration.
+Every turn, branch, and fruit is now protected by the immutable logging shield.
 
-## Core Philosophy
+---
+
+## Core Philosophy (Updated 2026-06-22)
+
 - Every dialogue turn = immutable first-class node (`Turn-XXX.md`)
-- Branching is native (Git-style)
-- Dual memory system (Human Markdown + Machine Vector/Graph)
-- RLM orchestration for efficient recursive reasoning
+- **All mutations must pass through Vigil Logician v3**
+- Branching is native (Git-style) and fully audited
+- Dual memory system (Human Markdown + Machine Vector/Graph + Honcho peer memory)
+- RLM orchestration for recursive reasoning
 
-## Key Features
-- Per-turn nodes with rich "Fruits" (code, images, terminal outputs)
-- Git-style revisions and history preservation
-- Scoped context + intelligent retrieval
-- Obsidian-first, local-first, fully portable
+## Recent Direction (Tonight)
+
+See [`docs/PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md`](docs/PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md)
+
+**Prototype being built now:**
+- LogicianBridge integration
+- Strict Node schema
+- CLI for creating first trunk + turns
+- Automatic logging of all actions
+
+This brings structured immutable history that **benefits Honcho** by providing high-quality decision traces, success patterns, and preference data.
 
 ## Project Status
+
 - Architecture & RLM design complete
-- Folder structure & node model defined
+- **Logician v3 integration architecture defined**
+- **Minimal prototype under construction** (Phase 0.5)
 - Ready for implementation
 
 ## Documentation
+
+- [Proposed Improvements + Logician Integration](./docs/PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md)
 - [Architecture](./docs/architecture.md)
-- [Folder Structure](./docs/folder-structure.md)
+- [Master Checklist](./MASTER-Checklist.md)
 - [Memory System](./docs/memory.md)
-- [Instructions & Guidelines](./docs/instructions.md)
-- [Files & Fruits](./docs/files.md)
 - [RLM Prompts](./docs/rlm-system-prompts.md)
 
 ---
 
-**Let's build the future of AI conversation interfaces.**
+**Let's build the future of structured AI conversation.**
+
+*Last updated: 2026-06-22 by VIGIL*

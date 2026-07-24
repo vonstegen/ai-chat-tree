@@ -134,7 +134,7 @@ source: {self.source}
                     if val == "null":
                         return default
                     if is_list:
-                        return [x.strip().strip("'"") for x in val[1:-1].split(",")]
+                        return [x.strip().strip("'\"") for x in val[1:-1].split(",")]
                     if val.lower() == "true":
                         return True
                     if val.lower() == "false":
@@ -341,10 +341,10 @@ file_path: {self.file_path or "null"}
         return cls(**data)
 
 
-# ─── Trunoo ───────────────────────────────────────────────
+# ─── Trunko ───────────────────────────────────────────────
 
 @dataclass
-class Trunoo(Node):
+class Trunko:
     """A trunk — the root of a branch hierarchy."""
     id: str
     name: str
@@ -376,7 +376,7 @@ created: "{self.created}"
 description: {self.description}
 ---
 
-# Trunoo {self.name} ({self.id})
+# Trunko {self.name} ({self.id})
 
 > _{self.description or "_no description_"}_
 
@@ -386,7 +386,7 @@ description: {self.description}
         return fm
 
     @classmethod
-    def from_markdown(cls, content: str) -> Trunoo:
+    def from_markdown(cls, content: str) -> Trunko:
         m = re.match(r"^---\n(.*?)\n---\n(.*)$", content, re.DOTALL)
         if not m:
             raise ValueError("No frontmatter in trunoo file")
@@ -411,5 +411,5 @@ description: {self.description}
         )
 
     @classmethod
-    def from_data(cls, data: Dict) -> Trunoo:
+    def from_data(cls, data: Dict) -> Trunko:
         return cls(**data)

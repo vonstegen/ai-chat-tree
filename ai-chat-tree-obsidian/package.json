@@ -1,0 +1,24 @@
+{
+  "name": "obsidian-ai-chat-tree-plugin",
+  "version": "0.1.0",
+  "description": "AI Chat Tree \u2014 structured conversation tree with RLM, vector search, and fruits.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs --sourcemap --watch",
+    "build": "node esbuild.config.mjs --production",
+    "typecheck": "tsc -noEmit --project tsconfig.json"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "peerDependencies": {
+    "obsidian": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "esbuild": "0.17.3",
+    "obsidian": "latest",
+    "tslib": "2.4.0",
+    "typescript": "4.7.4",
+    "@types/babel__traverse": "7.18.2"
+  }
+}
