@@ -1,0 +1,13 @@
+# Inference Tree — Visual Diagram
+
+[@] Root... (stem) [active]
+  [⇢] RoundTrip Branch... (branch) [active]
+
+---
+
+**Total nodes:** 2
+**Stem length:** 1
+**Branches:** 1
+**Fruits:** 0
+**Leaves:** 1
+**Verified:** True

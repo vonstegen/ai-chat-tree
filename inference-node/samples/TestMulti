@@ -1,0 +1,17 @@
+# Inference Tree — Visual Diagram
+
+[@] Root... (stem) [active]
+  [—] Stem... (stem) [active]
+    [⇢] Branch... (branch) [active]
+      [✦] Leaf... (leaf) [terminal]
+    [✿] Fruit... (fruit) [resolved]
+    [—] Stem2... (stem) [active]
+
+---
+
+**Total nodes:** 6
+**Stem length:** 2
+**Branches:** 1
+**Fruits:** 1
+**Leaves:** 3
+**Verified:** True

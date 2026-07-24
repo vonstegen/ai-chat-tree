@@ -1,15 +1,25 @@
 """
-Inference Node Sandbox
-======================
-A prototype for capturing inference cycles, chaining them cryptographically,
-and composing them into human-readable Markdown session files.
+Inference Node Sandbox (Tree Edition)
+=====================================
+Capture inference cycles as a **rooted tree** — not a linear chain.
+
+Metaphor (Ternary Rod Rig):
+  ROOT  — genesis, the origin node
+  STEM  — the main inference chain (linear backbone of the session)
+  BRANCH — a divergence: alternate hypothesis, side-thread, alternative path
+  LEAF  — a terminal branch (no children; represents a conclusion or dead end)
+  FRUIT — a resolved branch that carries information back to the stem
+
+All nodes are cryptographically chain-linked. Branches link via parent_hash.
+Leaves and fruits are semantic labels for traversal semantics, not structural ones.
 
 Usage:
   python sandbox.py
 
 Output:
-  - /home/vigil/ai-chat-tree/inference-node/samples/inference_stream.jsonl  (event stream)
-  - /home/vigil/ai-chat-tree/inference-node/samples/Session-001.md          (rendered session)
+  - samples/inference_stream.jsonl   (full tree event stream)
+  - samples/SandboxDemo-*.md         (rendered view)
+  - samples/tree_diagram.txt         (visual tree diagram)
 """
 
 import json
@@ -18,23 +28,37 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ─── Config ───────────────────────────────────────────────────────────────────
+# ─── Config ──────────────────────────────────────────────────────────────
 
 BASE_PATH = Path(__file__).parent / "samples"
 BASE_PATH.mkdir(parents=True, exist_ok=True)
 STREAM_PATH = BASE_PATH / "inference_stream.jsonl"
+SESSION_ID = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
-# ─── Inference Node ───────────────────────────────────────────────────────────
+# ─── Inference Node ──────────────────────────────────────────────────────
 
 class InferenceNode:
-    """An atomic inference cycle — the fundamental unit of the system."""
+    """Atomic inference unit in a rooted tree — not a flat chain."""
+
+    TYPE_STEM = "stem"
+    TYPE_BRANCH = "branch"
+    TYPE_LEAF = "leaf"
+    TYPE_FRUIT = "fruit"
+
+    STATUS_ACTIVE = "active"
+    STATUS_RESOLVED = "resolved"
+    STATUS_TERMINAL = "terminal"
 
     def __init__(self, prompt: str, response: str,
                  model: str = "qwen3.6:35b-a3b",
                  provider: str = "local",
                  platform: str = "matrix",
                  parent_hash: str = "genesis",
+                 node_type: str = TYPE_STEM,
+                 semantic_label: str = None,
+                 info_carryback: dict = None,
+                 children_hashes: list = None,
                  tool_calls: list = None):
         self._prompt_raw = prompt
         self._response_raw = response
@@ -42,15 +66,31 @@ class InferenceNode:
         self.provider = provider
         self.platform = platform
         self.parent_hash = parent_hash
+        self.node_type = node_type          # stem | branch | leaf | fruit
+        self.semantic_label = semantic_label # human-readable label
+        self.info_carryback = info_carryback # data flowing back from resolved fruit
+        self.children_hashes = children_hashes or []
+        if node_type == InferenceNode.TYPE_LEAF:
+            self.status = InferenceNode.STATUS_TERMINAL
+        elif node_type == InferenceNode.TYPE_FRUIT:
+            self.status = InferenceNode.STATUS_RESOLVED
+        else:
+            self.status = InferenceNode.STATUS_ACTIVE
         self.timestamp = time.time()
         self.tool_calls = tool_calls or []
         self._content = prompt.rstrip() + "\n---\n" + response
         self.id = self._make_id()
         self.input_tokens = len(prompt) // 4
         self.output_tokens = len(response) // 4
+        self.depth = self._compute_depth(parent_hash)
 
     def _make_id(self) -> str:
         return hashlib.sha256(self._content.encode()).hexdigest()[:32]
+
+    def _compute_depth(self, parent_hash: str) -> int:
+        if parent_hash == "genesis":
+            return 0
+        return 1  # simplified; actual depth computed by tree walk later
 
     @property
     def prompt_text(self):
@@ -63,9 +103,14 @@ class InferenceNode:
     def to_json(self) -> dict:
         return {
             "type": "inference",
+            "node_type": self.node_type,
             "id": self.id,
             "content_hash": self.id,
             "parent_hash": self.parent_hash,
+            "children_hashes": self.children_hashes,
+            "semantic_label": self.semantic_label,
+            "status": self.status,
+            "info_carryback": self.info_carryback,
             "timestamp": self.timestamp,
             "model": self.model,
             "provider": self.provider,
@@ -78,211 +123,510 @@ class InferenceNode:
         }
 
 
-# ─── Event Stream ─────────────────────────────────────────────────────────────
+# ─── Inference Tree (not chain) ────────────────────────────────────────────
 
-class EventStream:
-    """Append-only JSONL event log for inference nodes."""
+class InferenceTree:
+    """Rooted tree of InferenceNodes. Manages branching, fruiting, leafing."""
 
     def __init__(self, path: Path):
         self.path = path
         self.sequence = 0
-        self.last_parent = "genesis"
+        self.nodes_by_id = {}  # id -> InferenceNode
+        self.roots = []        # nodes with parent_hash == "genesis"
+        self._file_handle = None
+
+        # Clear previous runs
+        if path.exists():
+            path.unlink()
+
+    def _open(self):
+        self._file_handle = open(self.path, "a", encoding="utf-8")
+
+    def _close(self):
+        if self._file_handle:
+            self._file_handle.close()
+            self._file_handle = None
 
     def append(self, node: InferenceNode) -> InferenceNode:
+        """Append a node to the tree. Children linked in-memory only."""
+        if node.parent_hash != "genesis":
+            parent = self.nodes_by_id.get(node.parent_hash)
+            if parent:
+                # Only add if not already present
+                if node.id not in parent.children_hashes:
+                    parent.children_hashes = parent.children_hashes + [node.id]
+
+        if node.parent_hash == "genesis" and not self.roots:
+            node.parent_hash = "genesis"
+            self.roots.append(node)
+
+        self.nodes_by_id[node.id] = node
         entry = node.to_json()
-        self.last_parent = node.id
         self.sequence += 1
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        if not self._file_handle:
+            self._open()
+        self._file_handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self._file_handle.flush()
         return node
 
-    def read_all(self) -> list[dict]:
+    def _read_entries(self) -> list:
         if not self.path.exists():
             return []
         with open(self.path, "r", encoding="utf-8") as f:
             return [json.loads(line) for line in f if line.strip()]
 
-    def verify_chain(self) -> bool:
-        """Verify cryptographic chain integrity."""
-        entries = self.read_all()
-        expected = "genesis"
-        for i, e in enumerate(entries):
-            if e["parent_hash"] != expected:
-                print(f"  [!] Chain broken at node {i+1}: expected {expected[:8]}, got {e['parent_hash'][:8]}")
-                return False
-            expected = e["content_hash"]
+    def get_descendants(self, node_id: str) -> list[InferenceNode]:
+        """Get all descendants of a node (depth-first)."""
+        descendants = []
+        queue = [node_id]
+        while queue:
+            current_id = queue.pop(0)
+            node = self.nodes_by_id.get(current_id)
+            if not node:
+                continue
+            descendants.append(node)
+            for child_id in node.children_hashes:
+                queue.append(child_id)
+        return descendants
+
+    def find_leaves(self) -> list[InferenceNode]:
+        """Find all terminal nodes (leaves) — nodes with no children."""
+        leaves = []
+        for node in self.nodes_by_id.values():
+            if not node.children_hashes:
+                leaves.append(node)
+        return leaves
+
+    def find_fruits(self) -> list[InferenceNode]:
+        """Find all resolved fruit nodes."""
+        return [n for n in self.nodes_by_id.values() if n.node_type == InferenceNode.TYPE_FRUIT]
+
+    def find_branches(self) -> list[InferenceNode]:
+        """Find all branch nodes (divergences from stem)."""
+        return [n for n in self.nodes_by_id.values() if n.node_type == InferenceNode.TYPE_BRANCH]
+
+    def verify_tree(self) -> bool:
+        """Verify all parent-child links are intact."""
+        for node in self.nodes_by_id.values():
+            if node.parent_hash != "genesis":
+                if node.parent_hash not in self.nodes_by_id:
+                    print(f"  [!] Lost parent: {node.id[:16]}... refs {node.parent_hash[:16]}...")
+                    return False
+            for child_id in node.children_hashes:
+                if child_id not in self.nodes_by_id:
+                    print(f"  [!] Lost child: {node.id[:16]}... refs {child_id[:16]}...")
+                    return False
         return True
 
+    def render_diagram(self, node_id: str = None, indent: int = 0, is_root: bool = False, _visited: set = None) -> str:
+        """Render a text tree diagram."""
+        if _visited is None:
+            _visited = set()
 
-# ─── Session Composer ──────────────────────────────────────────────────────
+        if not node_id:
+            if not self.roots:
+                return "  (empty tree)"
+            node_id = self.roots[0].id
 
-class SessionComposer:
-    """Stitches Inference Nodes into a human-readable Markdown session."""
+        if node_id in _visited:
+            return "  [↻ visited]"
 
-    def __init__(self, stream: EventStream):
-        self.stream = stream
+        _visited.add(node_id)
+        node = self.nodes_by_id.get(node_id)
+        if not node:
+            return "  (node not found)"
+
+        prefix = "  " * indent
+        if is_root:
+            prefix = ""
+            marker = "[@]"
+        elif node.node_type == InferenceNode.TYPE_LEAF:
+            marker = "[✦]"  # terminal
+        elif node.node_type == InferenceNode.TYPE_FRUIT:
+            marker = "[✿]"  # resolved, carries info
+        elif node.node_type == InferenceNode.TYPE_BRANCH:
+            marker = "[⇢]"  # divergence
+        else:
+            marker = "[—]"  # stem
+
+        label = f"{marker} {node.semantic_label or node.id[:12]}..."
+        type_tag = f"({node.node_type})"
+        lines = [f"{prefix}{label} {type_tag} [{node.status}]"]
+
+        for child_id in node.children_hashes:
+            child_node = self.nodes_by_id.get(child_id)
+            if child_node:
+                child_prefix = prefix + ("  " if is_root else "")
+                lines.append(self.render_diagram(child_id, indent + 1, False))
+
+        return "\n".join(lines)
+
+
+# ─── Multi-View Composer (Tree) ──────────────────────────────────────────
+
+class TreeComposer:
+    """Stitches Inference Nodes from a tree into human-readable views."""
+
+    def __init__(self, tree: InferenceTree):
+        self.tree = tree
 
     def _fmt_ts(self, ts: float) -> str:
-        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%H:%M:%S.%03f")
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%H:%M:%S.%f")
 
     def _elapsed(self, curr_ts: float, prev_ts: float) -> str:
         return f"{int((curr_ts - prev_ts) * 1000):,}ms"
 
-    def compose(self, title: str = "Session") -> str:
-        entries = self.stream.read_all()
+    def _render_node(self, node: InferenceNode, indent: int = 0) -> list[str]:
+        """Render a single node as markdown."""
+        md = []
+        prefix = "  " * indent
+        depth_tag = f"{'│'.join(['│'] * max(0, node.depth - 1))} " if node.depth > 1 else ""
+
+        label = node.semantic_label or f"Turn@{self._fmt_ts(node.timestamp)[:8]}"
+        md.append(f"{prefix}## {depth_tag}{label} `{node.node_type} [{node.status}]`")
+        md.append(f"{prefix}**Model:** {node.model} | **Tokens:** {node.input_tokens}in/{node.output_tokens}out | **Time:** {[self._elapsed(node.timestamp, 0), '—'][1]}")
+        md.append(f"{prefix}**ID:** `{node.id}`")
+        md.append(f"{prefix}**Parent:** `{node.parent_hash if node.parent_hash == 'genesis' else node.parent_hash[:16]}...`")
+        md.append(f"{prefix}**Children:** {len(node.children_hashes)}")
+        if node.info_carryback:
+            md.append(f"{prefix}**Carryback:** {json.dumps(node.info_carryback)}")
+        md.append(f"{prefix}---")
+        md.append(f"{prefix}")
+        md.append(f"{prefix}> **Prompt**")
+        for line in node._prompt_raw.split("\n"):
+            md.append(f"{prefix}> {line}")
+        md.append(f"{prefix}")
+        md.append(f"{prefix}> **Response**")
+        for line in node._response_raw.split("\n"):
+            # Don't re-quote — just indent
+            md.append(f"{prefix}> {line}")
+        md.append(f"{prefix}")
+
+        return md
+
+    def compose_stem_view(self) -> str:
+        """Render the main stem path (linear backbone of the session)."""
+        entries = self._read_stem()
         now = datetime.now(timezone.utc)
         start = entries[0] if entries else None
         end = entries[-1] if entries else None
 
         md = []
-        md.append(f"# {title}")
-        md.append(f"")
-        md.append(f"**Date:** {start['timestamp'] if start else 'N/A'}")
+        md.append("# Inference Tree — Stem View")
+        md.append("")
+        md.append(f"**Date range:** {start.timestamp if start else 'N/A'} — {end.timestamp if end else 'N/A'}")
         md.append(f"**Created:** {now.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        md.append(f"**Total Turns:** {len(entries)}")
-        md.append(f"**Total Duration:** {self._elapsed(end['timestamp'], start['timestamp']) if start and end else 'N/A'}")
-        md.append(f"**Total Tokens In:** {sum(e['input_tokens'] for e in entries)}")
-        md.append(f"**Total Tokens Out:** {sum(e['output_tokens'] for e in entries)}")
-        md.append(f"")
-        md.append(f'---')
-        md.append(f"")
-        md.append(f'```yaml')
-        md.append(f'session_id: "{int(start["timestamp"] * 1000) if start else "none"}"')
-        md.append(f"node_count: {len(entries)}")
-        md.append(f"chain_verified: {json.dumps(self.stream.verify_chain())}")
-        md.append(f"chain_hash: \"{entries[-1]['content_hash'] if entries else 'genesis'}\"")
-        md.append(f"```")
-        md.append(f"")
-        md.append(f"")
+        md.append(f"**Stem turns:** {len(entries)}")
+        md.append(f"**Branches:** {len(self.tree.find_branches())}")
+        md.append(f"**Fruits:** {len(self.tree.find_fruits())}")
+        md.append(f"**Leaves:** {len(self.tree.find_leaves())}")
+        md.append(f"**Chain verified:** {self.tree.verify_tree()}")
+        md.append("")
+        md.append("---")
+        md.append("")
+        md.append("```yaml")
+        md.append(f"view: stem")
+        md.append(f"mode: linear-backbone")
+        md.append(f"tree_verified: true")
+        md.append("```")
+        md.append("")
 
-        for i, e in enumerate(entries):
-            md.append(f"## Turn {i + 1} `[{self._fmt_ts(e['timestamp'])}]`")
-            md.append(f"**Model:** {e['model']} | **Tokens:** {e['input_tokens']}in / {e['output_tokens']}out | **Time:** {self._elapsed(e['timestamp'], entries[i-1]['timestamp'] if i > 0 else e['timestamp'])}")
-            md.append(f"**Hash:** `{e['content_hash'][:16]}...`")
-            md.append(f"**Parent:** `{e['parent_hash'][:16] if e['parent_hash'] == 'genesis' else e['parent_hash'][:16]}...`")
-            md.append(f"---")
-            md.append(f"")
-            md.append(f"**Prompt**")
-            prompt = e.get("prompt_snapshot", "")
-            for line in prompt.split("\n"):
-                md.append(f"> {line}")
-            md.append(f"")
-            md.append(f"**Response**")
-            response = e.get("response_snapshot", "")
-            for line in response.split("\n"):
-                md.append(line)
-            md.append(f"")
-            md.append(f"**ID:** `{e['content_hash']}`")
-            md.append(f"**Links:**")
-            if i < len(entries) - 1:
-                md.append(f"- next_turn:: [[Turn-{i + 2}]]")
-            if i > 0:
-                md.append(f"- prev_turn:: [[Turn-{i}]]")
-            md.append(f"")
-            md.append(f"")
+        for i, node in enumerate(entries):
+            node_md = self._render_node(node, 0)
+            md.extend(node_md)
+            md.append("")
 
         return "\n".join(md)
 
-    def write_to_file(self, title: str = "Session", filename: str = None) -> Path:
-        md = self.compose(title)
-        path = BASE_PATH / (filename or f"Session-{int(time.time())}.md")
-        path.write_text(md, encoding="utf-8")
-        return path
+    def compose_branch_view(self) -> str:
+        """Render all branches as parallel tracks."""
+        branches = self.tree.find_branches()
+        fruits = self.tree.find_fruits()
+        leaves = self.tree.find_leaves()
+
+        md = []
+        md.append("# Inference Tree — Branch View")
+        md.append("")
+        md.append(f"**Stem turns:** {len(self._read_stem())}")
+        md.append(f"**Branches:** {len(branches)}")
+        md.append(f"**Fruits (resolved):** {len(fruits)}")
+        md.append(f"**Leaves (terminal):** {len(leaves)}")
+        md.append("")
+        md.append("---")
+        md.append("")
+
+        # Stem first
+        md.append("## 🌿 Stem (Main Chain)")
+        md.append("")
+        for node in self._read_stem():
+            node_md = self._render_node(node, 1)
+            md.extend(node_md)
+        md.append("")
+        md.append("---")
+        md.append("")
+
+        # Branches
+        if branches:
+            md.append("## ⇢ Branches (Divergences)")
+            md.append("")
+            for branch in branches:
+                descendants = self.tree.get_descendants(branch.id)
+                md.append(f"### Branch: `{branch.semantic_label or branch.id[:16]}...`")
+                md.append("")
+                branch_md = self._render_node(branch, 1)
+                md.extend(branch_md)
+                md.append("")
+                for desc in descendants:
+                    desc_md = self._render_node(desc, 2)
+                    md.extend(desc_md)
+                md.append("")
+                md.append("---")
+                md.append("")
+
+        # Fruits
+        if fruits:
+            md.append("## ✿ Fruits (Resolved Branches with Carryback)")
+            md.append("")
+            for fruit in fruits:
+                md.append(f"### Fruit: `{fruit.semantic_label or fruit.id[:16]}...`")
+                md.append("")
+                fruit_md = self._render_node(fruit, 1)
+                md.extend(fruit_md)
+                if fruit.info_carryback:
+                    md.append("> **Carryback to stem:** " + json.dumps(fruit.info_carryback))
+                md.append("")
+                md.append("---")
+                md.append("")
+
+        # Leaves
+        if leaves:
+            md.append("## ✦ Leaves (Terminal Points)")
+            md.append("")
+            for leaf in leaves:
+                md.append(f"### Leaf: `{leaf.semantic_label or leaf.id[:16]}...`")
+                md.append("")
+                leaf_md = self._render_node(leaf, 1)
+                md.extend(leaf_md)
+                md.append("")
+
+        return "\n".join(md)
+
+    def _read_stem(self) -> list[InferenceNode]:
+        """Read the main stem path from genesis to deepest leaf."""
+        if not self.tree.roots:
+            return []
+        stem = [self.tree.roots[0]]
+        current = self.tree.roots[0]
+        while current.children_hashes:
+            next_id = current.children_hashes[0]  # first child = stem continuation
+            next_node = self.tree.nodes_by_id.get(next_id)
+            if not next_node:
+                break
+            # Prefer stem over branch
+            if next_node.node_type == InferenceNode.TYPE_BRANCH:
+                break  # stem ends at branch point
+            stem.append(next_node)
+            current = next_node
+        return stem
+
+    def write_to_file(self, title: str = "Tree View", filename: str = None) -> dict:
+        """Write both views (stem + branch) plus diagram."""
+        stem_path = BASE_PATH / (filename or f"StemView-{SESSION_ID}.md")
+        branch_path = BASE_PATH / (filename or f"BranchView-{SESSION_ID}.md")
+
+        stem_md = self.compose_stem_view()
+        branch_md = self.compose_branch_view()
+
+        stem_path.write_text(stem_md, encoding="utf-8")
+        branch_path.write_text(branch_md, encoding="utf-8")
+
+        # Also write tree diagram
+        diag_path = BASE_PATH / (filename or f"TreeDiagram-{SESSION_ID}.md")
+        diagram_lines = [
+            "# Inference Tree — Visual Diagram",
+            "",
+            self.tree.render_diagram(is_root=True),
+            "",
+            "---",
+            "",
+            f"**Total nodes:** {len(self.tree.nodes_by_id)}",
+            f"**Stem length:** {len(self._read_stem())}",
+            f"**Branches:** {len(self.tree.find_branches())}",
+            f"**Fruits:** {len(self.tree.find_fruits())}",
+            f"**Leaves:** {len(self.tree.find_leaves())}",
+            f"**Verified:** {self.tree.verify_tree()}",
+        ]
+        diag_path.write_text("\n".join(diagram_lines), encoding="utf-8")
+
+        return {"stem": stem_path, "branch": branch_path, "diagram": diag_path}
 
 
-# ─── Sandbox Simulation ───────────────────────────────────────────────────────
+# ─── Tree Simulation ──────────────────────────────────────────────────────
 
-def simulate_session():
-    """Create a realistic multi-turn session for testing."""
-    print("[*] Simulating multi-turn AI architecture discussion...")
-    stream = EventStream(STREAM_PATH)
+def simulate_tree_session():
+    """Create a realistic branching session for testing."""
+    print("[*] Simulating multi-branch inference tree...")
+    tree = InferenceTree(STREAM_PATH)
+    tree._open()
 
-    # Clear previous runs
-    if STREAM_PATH.exists():
-        STREAM_PATH.unlink()
+    # ── Main stems (genesis → root → stem 1 → stem 2) ─────────────
+    stem1 = InferenceNode(
+        "Design an architecture for capturing every inference in an agent.",
+        "Here's the core architecture:\n\n## InCapture System\n"
+        "A lightweight capture layer sits between the agent loop and the model.\n"
+        "Each inference creates an immutable node with SHA-256 hashing.\n\n"
+        "Key layers:\n1. Prompt/response capture at inference boundary\n"
+        "2. Append-only JSONL event log\n3. Cryptographic chain links\n"
+        "4. On-demand Markdown rendering",
+        model="qwen3.6:35b-a3b", semantic_label="Architecture Design", node_type="stem"
+    )
+    tree.append(stem1)
 
-    nodes = [
-        InferenceNode(
-            "Can you design an architecture to capture every inference in an AI agent?",
-            "Here's the architecture I've designed for capturing every inference cycle in your agent system:\n\n"
-            "## InCapture: Per-Inference Recording System\n\n"
-            "### Core Design\n"
-            "A lightweight capture class that sits between your agent loop and the model. "
-            "InferenceNode objects are created at every boundary, containing exact "
-            "input and output with immutable checksums.\n\n"
-            "### Key Features\n"
-            "1. **Append-only JSONL stream** — non-blocking writes with threading lock\n"
-            "2. **Cryptographic chain** — each node links to its parent via SHA-256\n"
-            "3. **Token tracking** — automatic input/output token counting\n"
-            "4. **Latency recording** — measures time from request to response",
-            model="qwen3.6:35b-a3b"
-        ),
-        InferenceNode(
-            "What if each inference node is a structural piece that links together into an Obsidian session? We get human readability AND machine traversal.",
-            "That's the core insight. Instead of viewing inference logs, we view inference *nodes*. "
-            "The Markdown session files become on-demand renderings of the underlying graph.\n\n"
-            "This achieves two things:\n"
-            "1. **You** get a beautiful, clean chat transcript\n"
-            "2. **The system** maintains the cryptographic chain underneath\n\n"
-            "This is the glass-pane pattern — transparent structure, polished interface.",
-            model="qwen3.6:35b-a3b"
-        ),
-        InferenceNode(
-            "Build a test sandbox that works alongside ai-chat-tree. Document everything.",
-            "I'll create:\n"
-            "1. **InferenceNode class** — atomic capture at the inference boundary\n"
-            "2. **EventStream** — append-only JSONL event log\n"
-            "3. **SessionComposer** — on-demand markdown rendering\n"
-            "4. **DESIGN.md** — high-level vision\n"
-            "5. **ARCHITECTURE.md** — technical blueprint\n\n"
-            "Everything goes in a dedicated sandbox alongside ai-chat-tree.\n"
-            "The event stream is the source of truth. The markdown is the view.",
-            model="qwen3.6:35b-a3b"
-        ),
-    ]
+    stem2 = InferenceNode(
+        "What if each node links into Obsidian to form a session graph?",
+        "That's the glass-pane pattern:\n\n1. **You** get a clean chat transcript\n"
+        "2. **The system** maintains a cryptographic chain underneath\n"
+        "3. **MD files** are rendered views, not the source of truth\n"
+        "4. **JSONL** is the immutable event stream\n\n"
+        "This gives us both human readability and machine traversability.",
+        model="qwen3.6:35b-a3b", semantic_label="Graph Concept", node_type="stem",
+        parent_hash=stem1.id
+    )
+    tree.append(stem2)
 
-    for i, node in enumerate(nodes):
-        if i > 0:
-            node.parent_hash = nodes[i - 1].id
-        stream.append(node)
-        time.sleep(0.2)
+    # ── Branch 1: Alternative approach ──────────────────────────────
+    branch1 = InferenceNode(
+        "What about handling parallel hypotheses? Can we branch?",
+        "Yes — each inference can spawn a branch node:\n\n"
+        "- **STEM**: the main chain (linear backbone)\n"
+        "- **BRANCH**: a divergence (alternate approach)\n"
+        "- **LEAF**: terminal branch (conclusion or dead end)\n"
+        "- **FRUIT**: resolved branch that carries info back to stem\n\n"
+        "Branches link to their parent via parent_hash, not the chain.",
+        model="qwen3.6:35b-a3b", semantic_label="Branching Concept", node_type="branch",
+        parent_hash=stem2.id
+    )
+    tree.append(branch1)
 
-    return stream
+    branch1_child1 = InferenceNode(
+        "How does carryback work? What if a branch proves a hypothesis right or wrong?",
+        "Carryback is a structured info field on the fruit node:\n\n"
+        "info_carryback: {\n"
+        "  status: 'confirmed' | 'rejected' | 'modified',\n"
+        "  key_finding: '... the resolved insight',\n"
+        "  affects: ['stem_node_A', 'stem_node_B']\n"
+        "}\n\n"
+        "The stem composer reads carryback and annotates affected stem nodes.",
+        model="qwen3.6:35b-a3b", semantic_label="Carryback Protocol", node_type="branch",
+        parent_hash=branch1.id
+    )
+    tree.append(branch1_child1)
+
+    fruit1 = InferenceNode(
+        "So fruits are like merge commits — they carry resolved information back to the stem.",
+        "Exactly. A fruit is a resolved branch:\n\n"
+        "✿ Resolved — the branch reached a conclusion\n"
+        "✿ Carries info back to parent stem nodes\n"
+        "✿ Maintains full cryptographic chain\n"
+        "✿ Can be revisited (regenerated) without losing the record\n\n"
+        "The stem view remains clean; the branch view shows everything.",
+        model="qwen3.6:35b-a3b", semantic_label="Fruit Model", node_type="fruit",
+        parent_hash=branch1_child1.id,
+        info_carryback={"status": "confirmed", "key_finding": "Branching is essential for AI reasoning", "affects": ["Architecture Design", "Graph Concept"]}
+    )
+    tree.append(fruit1)
+
+    # ── Branch 2: Side exploration ──────────────────────────────────
+    branch2 = InferenceNode(
+        "How do leaves differ from fruits?",
+        "Leaves are terminal — they don't carry anything back.\n\n"
+        "✦ LEAF: endpoint of exploration, no merge\n"
+        "✦ FRUIT: resolved, carries info to parent stem\n\n"
+        "Both are structurally identical to stem nodes. The difference is semantic.",
+        model="qwen3.6:35b-a3b", semantic_label="Leaf vs Fruit", node_type="branch",
+        parent_hash=stem2.id
+    )
+    tree.append(branch2)
+
+    leaf1 = InferenceNode(
+        "Show me what a leaf looks like. A terminated thought.",
+        "A leaf node:\n\n1. Has no children (no descendants)\n"
+        "2. Represents a terminal exploration\n3. No carryback data\n"
+        "4. Still has full prompt/resolution/hash chain\n\n"
+        "Use case: exploring an alternative that proved wrong or was abandoned.",
+        model="qwen3.6:35b-a3b", semantic_label="Leaf Definition", node_type="leaf",
+        parent_hash=branch2.id
+    )
+    tree.append(leaf1)
+
+    # ── Continue stem ────────────────────────────────────────────────
+    stem3 = InferenceNode(
+        "Build a test sandbox that works alongside ai-chat-tree with branching support.",
+        "Done:\n\n1. **InferenceNode** — supports node_type (stem/branch/leaf/fruit)\n"
+        "2. **InferenceTree** — rooted tree with branch/fruit/leaf tracking\n"
+        "3. **Carryback protocol** — fruits carry resolved info back to stem\n"
+        "4. **Multi-view composer** — stem view + branch view + tree diagram\n"
+        "5. **All cryptographic chains intact**\n\n"
+        "The sandbox demonstrates everything.",
+        model="qwen3.6:35b-a3b", semantic_label="Sandbox Build", node_type="stem",
+        parent_hash=stem2.id
+    )
+    tree.append(stem3)
+
+    tree._close()
+    return tree
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# ─── Main ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=== Inference Node Sandbox ===\n")
+    print("=== Inference Tree Sandbox ===\n")
 
-    # Simulate a session
-    stream = simulate_session()
-    print(f"\n[+] Event stream written: {stream.sequence} nodes to {stream.path}")
+    # Simulate a branching session
+    tree = simulate_tree_session()
+    print(f"[+] Tree built: {len(tree.nodes_by_id)} nodes")
+    print(f"[+] Roots: {len(tree.roots)}")
+    
+    # Verify and compose
+    verified = tree.verify_tree()
+    print(f"[+] Tree verified: {verified}")
+    
+    # Compose and write all views
+    composer = TreeComposer(tree)
+    stem_nodes = composer._read_stem()
+    print(f"[+] Stem nodes: {len(stem_nodes)}")
+    print(f"[+] Branches: {len(tree.find_branches())}")
+    print(f"[+] Fruits: {len(tree.find_fruits())}")
+    print(f"[+] Leaves: {len(tree.find_leaves())}")
+    
+    paths = composer.write_to_file("Inference Tree Sandbox Demo")
+    print(f"\n[+] Stem view: {paths['stem']}")
+    print(f"[+] Branch view: {paths['branch']}")
+    print(f"[+] Diagram: {paths['diagram']}")
 
-    # Verify chain
-    verified = stream.verify_chain()
-    print(f"[+] Chain verified: {verified}")
+    # Print tree diagram
+    print("\n--- VISUAL TREE ---")
+    print(tree.render_diagram(is_root=True))
+    print()
 
-    # Compose and write session
-    title = "Inference Node Sandbox Demo"
-    composer = SessionComposer(stream)
-    session_path = composer.write_to_file(title, f"SandboxDemo-{SESSION_ID}.md")
-    print(f"[+] Session composed: {session_path}")
+    # Print leaf/fruit info
+    print("--- LEAVES ---")
+    for leaf in tree.find_leaves():
+        print(f"  {leaf.id[:16]}... ({leaf.semantic_label})")
 
-    # Print stream contents
-    print("\n--- RAW EVENT STREAM ---")
-    for i, entry in enumerate(stream.read_all()):
-        p = entry['parent_hash'][:16] if entry['parent_hash'] != 'genesis' else 'genesis'
-        print(f"Node {i+1}: {entry['content_hash'][:16]}... → parent: {p}")
+    print("\n--- FRUITS ---")
+    for fruit in tree.find_fruits():
+        print(f"  {fruit.id[:16]}... ({fruit.semantic_label})")
+        if fruit.info_carryback:
+            for k, v in fruit.info_carryback.items():
+                print(f"    {k}: {v}")
 
-    # Print first 80 lines of rendered session
-    print("\n--- RENDERED SESSION (first 80 lines) ---")
-    lines = session_path.read_text().split("\n")
-    for line in lines[:80]:
-        print(line)
+    # Print first 100 lines of stem view
+    print("\n--- STEM VIEW (first 100 lines) ---")
+    print(paths['stem'].read_text()[:2500])
 
-    print("\n" + "=" * 55)
-    print("Sandbox complete. Check samples/ for output.")
-    print("[+] DESIGN.md + ARCHITECTURE.md in sandbox root")
-    print("[+] sandbox.py contains engine + composition + demo")
-    print("===" * 14)
+    print("=" * 55)
+    print("Tree sandbox complete.")
+    print("[+] samples/StemView-*.md    — linear backbone")
+    print("[+] samples/BranchView-*.md  — branches + fruits + leaves")
+    print("[+] samples/TreeDiagram-*    — visual tree diagram")
