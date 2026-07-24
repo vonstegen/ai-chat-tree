@@ -322,9 +322,9 @@ Minimum viable demo that proves the architecture:
 - [x] Created `docs/PROPOSED-GUARDIAN-INTEGRATION.md` — accurate inventory of what exists, what pi-infra ships, recommended architecture
 - [x] Updated `README.md` — replaced Logician v3 references with Guardian/pi-infra architecture
 - [x] Added D-011 to decision table (Guardian integration path)
-- [ ] Replace stub `logician_bridge.py` with real Guardian bridge
-- [ ] Rename `logician_hash` field to `guardian_hash`
-- [ ] Update `Turn-001.md` frontmatter with `guardian_hash`
+- [x] Removed dead `core/` stubs (logician_bridge.py, node.py) — never touched by live engine
+- [x] Removed superseded `PROPOSED-IMPROVEMENTS-LOGICIAN-INTEGRATION.md`
+- [x] Renamed `logician_hash` → `guardian_hash` in `turns/Turn-001.md`
 - [ ] Core review of `PROPOSED-GUARDIAN-INTEGRATION.md` before merge
 - [ ] Decide: Python mirroring vs. TypeScript invocation of Guardian
 
