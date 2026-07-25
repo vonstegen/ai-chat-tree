@@ -134,8 +134,10 @@ This is a **living document**. It grows with the project and is the single sourc
 ### Validation
 - [x] Schema validator for all node types (Pydantic in `validation.py`)
 - [x] Link integrity checker (no dangling wikilinks) (`check_integrity()`)
-- [ ] CLI dry-run mode for all mutations
-  - **Status:** Not yet implemented — TODO item
+|[x] CLI dry-run mode for all mutations (2026-07-25)
+  - Added `dry_run` parameter to all 7 VaultManager mutation methods: create_trunk, create_brancho, create_turno, create_rotation, create_revision, delete_node, update_field
+  - Added `--dry-run` flag to all 8 CLI mutation subparsers: create, branch, fruit, rotate, trunk, delete, init, import
+  - All handlers check args.dry_run, pass through to VaultManager, and emit `[DRY RUN]` preview without writing
 
 ---
 
@@ -372,6 +374,7 @@ Minimum viable demo that proves the architecture:
 - __init__.py updated with new Phase 3 exports
 - MASTER-Checklist.md updated with 2026-07-25 entry
 - Phase 1-3 all committed and pushed
+- **CLI dry-run mode implemented (Phase 1 Validation):** `dry_run` param added to 7 VaultManager mutation methods and `--dry-run` flag added to 8 CLI subparsers
 
 ### 2026-05-14
 - D-001 research complete (Option C′: Plugin + Python engine via HTTP)

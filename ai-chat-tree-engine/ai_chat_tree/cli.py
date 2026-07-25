@@ -46,6 +46,7 @@ def _get_vectors(vault: VaultManager) -> VectorStore:
 def cmd_create(args: argparse.Namespace) -> None:
     """Create a new turn."""
     vault = _get_vault(args)
+    dry_run = getattr(args, 'dry_run', False)
     turno = vault.create_turno(
         branch_id=args.branch,
         prompt=args.prompt or "",
@@ -55,7 +56,11 @@ def cmd_create(args: argparse.Namespace) -> None:
         success_score=args.score or 0.0,
         tags=_parse_tags(args.tags) if args.tags else [],
         parent_turn=getattr(args, 'parent_turn', None),
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would create turn: {turno.id}")
+        return
     print(f"Created turn: {turno.id}")
     
     # Auto-embed if enabled
@@ -69,10 +74,15 @@ def cmd_branch(args: argparse.Namespace) -> None:
     """Create a new branch."""
     vault = _get_vault(args)
     parent = getattr(args, 'parent_turn', 'trunk-001') or 'trunk-001'
+    dry_run = getattr(args, 'dry_run', False)
     branch = vault.create_brancho(
         parent_turn=parent,
         name=args.name,
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would create branch: {branch.id} ({branch.name})")
+        return
     print(f"Created branch: {branch.id}")
 
 
@@ -83,35 +93,50 @@ def cmd_fruit(args: argparse.Namespace) -> None:
     content_path = getattr(args, 'file', None)
     if content_path:
         content = Path(content_path).read_text()
+    dry_run = getattr(args, 'dry_run', False)
     
     fruit = vault.create_rotation(
         turno_id=args.turn,
         content=content,
         fruit_type=args.type or "other",
         notes=getattr(args, 'notes', '') or "",
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would create fruit: {fruit.id} attached to {fruit.turno_id}")
+        return
     print(f"Created fruit: {fruit.id}")
 
 
 def cmd_rotate(args: argparse.Namespace) -> None:
     """Create a rotation (revision) of a turn."""
     vault = _get_vault(args)
+    dry_run = getattr(args, 'dry_run', False)
     rotation = vault.create_revision(
         turno_id=args.turn,
         new_prompt=args.prompt or "rotated prompt",
         change_reason=getattr(args, 'reason', '') or "automatic rotation",
         model=getattr(args, 'model', 'default') or "default",
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would create rotation: {rotation.id} for {rotation.revision_of}")
+        return
     print(f"Created rotation: {rotation.id}")
 
 
 def cmd_trunk(args: argparse.Namespace) -> None:
     """Create a new trunk."""
     vault = _get_vault(args)
+    dry_run = getattr(args, 'dry_run', False)
     trunk = vault.create_trunk(
         name=args.name,
         description=getattr(args, 'description', '') or "",
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would create trunk: {trunk.id} ({trunk.name})")
+        return
     print(f"Created trunk: {trunk.id}")
 
 
@@ -223,7 +248,11 @@ def cmd_delete(args: argparse.Namespace) -> None:
     """Delete a node."""
     vault = _get_vault(args)
     cascade = getattr(args, 'cascade', True)
-    path = vault.delete_node(args.id, cascade=cascade)
+    dry_run = getattr(args, 'dry_run', False)
+    path = vault.delete_node(args.id, cascade=cascade, dry_run=dry_run)
+    if dry_run:
+        print(f"[DRY RUN] Would delete {args.id} ({path})")
+        return
     print(f"Deleted {args.id} ({path})")
 
 
@@ -252,6 +281,7 @@ def cmd_dry_run(args: argparse.Namespace) -> None:
 def cmd_import(args: argparse.Namespace) -> None:
     """Import conversation data."""
     vault = _get_vault(args)
+    dry_run = getattr(args, 'dry_run', False)
     source = getattr(args, 'source', 'chatgpt')
     json_path = args.file
     
@@ -263,16 +293,25 @@ def cmd_import(args: argparse.Namespace) -> None:
         print(f"Unknown source: {source}")
         return
     
+    if dry_run:
+        print(f"[DRY RUN] Would import {count} turns from {source} data")
+        return
     print(f"Imported {count} turns from {source} data")
 
 
 def cmd_init(args: argparse.Namespace) -> None:
     """Initialize a fresh vault."""
     vault_path = args.vault or VAULT_DEFAULT
+    dry_run = getattr(args, 'dry_run', False)
     vault = VaultManager(vault_path)
     trunk = vault.create_trunk(
         name=getattr(args, 'trunk_name', 'default') or 'default',
+        dry_run=dry_run,
     )
+    if dry_run:
+        print(f"[DRY RUN] Would initialize vault at {vault_path}")
+        print(f"[DRY RUN] Would create trunk: {trunk.id} ({trunk.name})")
+        return
     print(f"Initialized vault at {vault_path}")
     print(f"Created trunk: {trunk.id}")
 
@@ -325,12 +364,14 @@ def main() -> None:
     cmd_create_parser.add_argument('--source', default='manual')
     cmd_create_parser.add_argument('--no-embed', action='store_true')
     cmd_create_parser.add_argument('--parent-turn', dest='parent_turn', default=None)
+    cmd_create_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_create_parser.set_defaults(func=cmd_create)
 
     # ── branch ──
     cmd_branch_parser = subparsers.add_parser('branch', help='Create a new branch')
     cmd_branch_parser.add_argument('--name', '-n', required=True)
     cmd_branch_parser.add_argument('--parent-turn', dest='parent_turn', default='trunk-001')
+    cmd_branch_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_branch_parser.set_defaults(func=cmd_branch)
 
     # ── fruit ──
@@ -340,6 +381,7 @@ def main() -> None:
     cmd_fruit_parser.add_argument('--file', '-f', default=None)
     cmd_fruit_parser.add_argument('--type', dest='type', default='other')
     cmd_fruit_parser.add_argument('--notes', '-n', default='')
+    cmd_fruit_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_fruit_parser.set_defaults(func=cmd_fruit)
 
     # ── rotate ──
@@ -348,12 +390,14 @@ def main() -> None:
     cmd_rotate_parser.add_argument('--prompt', '-p', required=True)
     cmd_rotate_parser.add_argument('--reason', default='automatic rotation')
     cmd_rotate_parser.add_argument('--model', default='default')
+    cmd_rotate_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_rotate_parser.set_defaults(func=cmd_rotate)
 
     # ── trunk ──
     cmd_trunk_parser = subparsers.add_parser('trunk', help='Create a new trunk')
     cmd_trunk_parser.add_argument('--name', '-n', required=True)
     cmd_trunk_parser.add_argument('--description', '-d', default='')
+    cmd_trunk_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_trunk_parser.set_defaults(func=cmd_trunk)
 
     # ── list ──
@@ -396,6 +440,7 @@ def main() -> None:
     cmd_del_parser = subparsers.add_parser('delete', help='Delete a node')
     cmd_del_parser.add_argument('--id', required=True)
     cmd_del_parser.add_argument('--cascade', dest='cascade', action='store_true', default=True)
+    cmd_del_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_del_parser.set_defaults(func=cmd_delete)
 
     # ── dry-run ──
@@ -409,12 +454,14 @@ def main() -> None:
     # ── init ──
     cmd_init_parser = subparsers.add_parser('init', help='Initialize a fresh vault')
     cmd_init_parser.add_argument('--trunk-name', dest='trunk_name', default='default')
+    cmd_init_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_init_parser.set_defaults(func=cmd_init)
 
     # ── import ──
     cmd_import_parser = subparsers.add_parser('import', help='Import conversation data')
     cmd_import_parser.add_argument('--file', '-f', required=True)
     cmd_import_parser.add_argument('--source', '-s', required=True, choices=['chatgpt', 'claude'])
+    cmd_import_parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False)
     cmd_import_parser.set_defaults(func=cmd_import)
 
     # ── health ──

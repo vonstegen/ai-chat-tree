@@ -67,18 +67,22 @@ class VaultManager:
 
     # ─── Public mutation interface ────────────────────────
 
-    def create_trunk(self, name: str, description: str = "") -> Trunko:
+    def create_trunk(self, name: str, description: str = "", dry_run=False) -> Optional[Trunko]:
         """Create a trunk with metadata file."""
         trunk = Trunko(id=new_id("trunk"), name=name, description=description)
+        if dry_run:
+            return trunk
         trunk_dir = self.trunks_dir() / trunk.id
         trunk_dir.mkdir(parents=True, exist_ok=True)
         path = trunk_dir / "_trunk.md"
         path.write_text(trunk.to_markdown())
         return trunk
 
-    def create_brancho(self, parent_turn: str = "trunk-001", name: str = "") -> Brancho:
+    def create_brancho(self, parent_turn: str = "trunk-001", name: str = "", dry_run=False) -> Optional[Brancho]:
         """Create a branch linked from a trunk."""
         branch = Brancho(parent_turn=parent_turn, name=name)
+        if dry_run:
+            return branch
         path = self.branch_dir() / f"{branch.id}.md"
         path.write_text(branch.to_markdown())
         # Update trunk's branch list
@@ -93,7 +97,8 @@ class VaultManager:
                      source: str = "manual",
                      success_score: float = 0.0,
                      tags: List[str] = None,
-                     parent_turn: Optional[str] = None) -> Turno:
+                     parent_turn: Optional[str] = None,
+                     dry_run: bool = False) -> Optional[Turno]:
         """Create a turn with atomic write and fruit scaffold."""
         turno = Turno(
             id=new_id("turn"),
@@ -106,6 +111,8 @@ class VaultManager:
             source=source,
             parent_turn=parent_turn,
         )
+        if dry_run:
+            return turno
         turn_dir = self.turno_dir(branch_id)
         turn_dir.mkdir(parents=True, exist_ok=True)
         path = turn_dir / f"{turno.id}.md"
@@ -117,7 +124,7 @@ class VaultManager:
 
     def create_rotation(self, turno_id: str, content: str,
                         fruit_type: str = "script",
-                        notes: str = "") -> Fruito:
+                        notes: str = "", dry_run: bool = False) -> Optional[Fruito]:
         """Create a fruit (output/asset) attached to a turn."""
         turno = None
         for node, _path in self.list_nodes("turn"):
@@ -136,6 +143,8 @@ class VaultManager:
             notes=notes,
             file_path=None,  # Will be set if external file saved
         )
+        if dry_run:
+            return fruit
         # Write fruit markdown in fruit repo
         path = self.fruits_dir() / f"{fruit.id}.md"
         path.write_text(fruit.to_markdown())
@@ -154,12 +163,14 @@ class VaultManager:
             file_path.write_text(content)
         return fruit
 
-    def delete_node(self, node_id: str, cascade: bool = True) -> str:
+    def delete_node(self, node_id: str, cascade: bool = True, dry_run: bool = False) -> Optional[str]:
         """Delete a node file. Optionally cascade delete children/fruits."""
         found = self._find_file(node_id)
         if not found:
             raise FileNotFoundError(f"Node {node_id} not found")
         path_str = str(found.relative_to(self.vault_root))
+        if dry_run:
+            return path_str
         found.unlink()
         if cascade:
             # Remove fruits dir if it exists
@@ -169,7 +180,7 @@ class VaultManager:
                 shutil.rmtree(turno_fruits)
         return path_str
 
-    def update_field(self, node_id: str, **kwargs) -> str:
+    def update_field(self, node_id: str, *, dry_run: bool = False, **kwargs) -> Optional[str]:
         """Update specific fields on a node."""
         file_path = self._find_file(node_id)
         if not file_path:
@@ -188,11 +199,14 @@ class VaultManager:
             raise ValueError(f"Unknown node type for {node_id}")
         for k, v in kwargs.items():
             setattr(node, k, v)
+        if dry_run:
+            return node.id
         file_path.write_text(node.to_markdown())
         return node.id
 
     def create_revision(self, turno_id: str, new_prompt: str,
-                        change_reason: str = "", model: str = "default") -> Turno:
+                        change_reason: str = "", model: str = "default",
+                        dry_run: bool = False) -> Optional[Turno]:
         """Create a revision node (D-010: inline linked node)."""
         original = None
         for node, _path in self.list_nodes("turn"):
@@ -214,6 +228,8 @@ class VaultManager:
             source="revision",
             parent_turn=original.id,
         )
+        if dry_run:
+            return revision
         revision_dir = self.turno_dir(revision.branch)
         revision_dir.mkdir(parents=True, exist_ok=True)
         path = revision_dir / f"{revision.id}.md"
