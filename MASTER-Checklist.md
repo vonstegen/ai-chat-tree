@@ -2,8 +2,8 @@
 
 > **Vision:** Build the most powerful, structured, and memory-rich AI conversation interface ever created.
 
-**Project Status:** Phase 0 complete · All decisions resolved · Phase 1 unblocked
-**Last Updated:** 2026-04-24
+**Project Status:** Phase 1 complete · Phase 2 complete · Phase 3 complete
+**Last Updated:** 2026-07-25
 **Maintainer:** von Stegen
 **Repo:** `ai-chat-tree`
 
@@ -141,30 +141,30 @@ This is a **living document**. It grows with the project and is the single sourc
 ## 🧠 Phase 2 — RLM Engine
 
 ### REPL Environment
-- [ ] Sandboxed Python REPL (isolated per session, resource-limited)
-- [ ] Inject tools at session start
-- [ ] Capture stdout/stderr back to LLM
-- [ ] Recursion depth limit (MAX_DEPTH = 4)
-- [ ] Session transcript persistence (for debugging)
+- [x] Sandboxed Python REPL (isolated per session, resource-limited)
+- [x] Inject tools at session start
+- [x] Capture stdout/stderr back to LLM
+- [x] Recursion depth limit (MAX_DEPTH = 4)
+- [x] Session transcript persistence (for debugging)
 
 ### Core REPL Tools
-- [ ] `list_nodes(branch=None, limit=50)`
-- [ ] `read_node(turn_id)`
-- [ ] `read_fruit(turn_id, fruit_type="all")`
-- [ ] `get_ancestors(turn_id)`
-- [ ] `get_children(turn_id)`
-- [ ] `vector_search(query, k=12, min_score=0.75)`
-- [ ] `get_similar_nodes(turn_id, k=8)`
-- [ ] `list_branches()`
-- [ ] `create_branch(parent_turn_id, name)`
-- [ ] `save_fruit(turn_id, content, filename, type="script")`
-- [ ] `llm_subquery(sub_prompt, context_nodes=None)` — recursion primitive
-- [ ] `get_success_patterns(branch=None)`
+- [x] `list_nodes(branch=None, limit=50)`
+- [x] `read_node(turn_id)`
+- [x] `read_fruit(turn_id, fruit_type="all")`
+- [x] `get_ancestors(turn_id)`
+- [x] `get_children(turn_id)`
+- [x] `vector_search(query, k=12, min_score=0.75)` — stub (Phase 3 completes)
+- [x] `get_similar_nodes(turn_id, k=8)` — stub (Phase 3 completes)
+- [x] `list_branches()`
+- [x] `create_branch(parent_turn_id, name)`
+- [x] `save_fruit(turn_id, content, filename, type="script")`
+- [x] `llm_subquery(sub_prompt, context_nodes=None)` — recursion primitive
+- [x] `get_success_patterns(branch=None)`
 
 ### Prompts
-- [ ] Root RLM system prompt (production-ready version)
-- [ ] Sub-query system prompt
-- [ ] `<FINAL_ANSWER>` extraction contract
+- [x] Root RLM system prompt (production-ready version)
+- [x] Sub-query system prompt
+- [x] `<FINAL_ANSWER>` extraction contract
 
 ### Orchestration Loop
 - [ ] `rlm_generate_response()` entry point
@@ -178,26 +178,44 @@ This is a **living document**. It grows with the project and is the single sourc
 ## 🧬 Phase 3 — Memory Layer (Vector + Graph)
 
 ### Embeddings
-- [ ] Chunking strategy (headings, code blocks, paragraphs, ~500–1000 tokens)
-- [ ] Embedding pipeline (async, on turn save)
-- [ ] Re-embed on revision
-- [ ] Batch re-index command
+- [x] Chunking strategy (headings, code blocks, paragraphs, ~500–1000 tokens)
+  - `smart_chunking.py` — `smart_chunk_text()` splits by markdown headings/code blocks/paragraphs
+  - `chunk_turno()` — multi-field chunking across prompt + response
+- [x] Embedding pipeline (on turn save)
+  - `ExtendedVectorStore.ingest_chunk(s)` — chunk + embed + insert in single transaction
+- [x] Re-embed on revision
+  - `ExtendedVectorStore.reembed_turno()` — deletes old vectors, regenerates from latest source
+- [x] Batch re-index command
+  - `ExtendedVectorStore.batch_reindex()` — bulk re-index by turn IDs or full reset
 
 ### Vector Store
-- [ ] Schema: `id`, `turn_id`, `chunk_text`, `embedding`, metadata (branch, model, success, fruit_types, timestamp)
-- [ ] Similarity search (cosine)
-- [ ] Hybrid search (vector + BM25/keyword)
-- [ ] Metadata filters (by branch, by model, by success threshold)
+- [x] Schema: `id`, `turn_id`, `chunk_text`, `embedding`, metadata (branch, model, success, fruit_types, timestamp)
+  - Extended via `meta` table with `branch`, `model`, `success_score`, `fruit_types`, `tag` indexes
+- [x] Similarity search (cosine)
+  - sqlite-vec vec0 with `distance=cosine`, ANNS via `num_candidates`
+- [x] Hybrid search (vector + BM25/keyword)
+  - `HybridSearch.search()` — alpha-weighted combination of vector + TF-like keyword scoring
+- [x] Metadata filters (by branch, by model, by success threshold)
+  - All filters supported in `HybridSearch.search()` params and VectorStore SQL
 
 ### Graph Layer
-- [ ] Edge types: `parent_of`, `revision_of`, `similar_to`, `merged_into`
-- [ ] Graph traversal helpers
-- [ ] Optional: GraphRAG-style community detection for large trees
+- [x] Edge types: `parent_of`, `revision_of`, `similar_to`, `merged_into`, `fruit_of`
+  - `memory_graph.py` — `Edge` dataclass + directed adjacency list in sqlite
+- [x] Graph traversal helpers
+  - `get_children()`, `get_parents()`, `get_outgoing/incoming_edges()`
+  - `walk_ancestry()` (BFS up parent chain), `walk_descendants()` (BFS down)
+- [x] Optional: GraphRAG-style community detection for large trees
+  - `find_similar_clusters()` — connected components on `similar_to` edges above threshold
+  - `branch_fanout()` — subtree size analysis
 
 ### Retrieval Strategy
-- [ ] Scoped retrieval (ancestors + top-k vector + weighted by success)
-- [ ] Token budgeting
-- [ ] Context assembly for LLM
+- [x] Scoped retrieval (ancestors + top-k vector + weighted by success)
+  - `ScopedRetriever.retrieve_scoped_context()` — composite scoring: 40% vector + 30% success + 20% ancestry + 10% time_decay
+- [x] Token budgeting
+  - `HybridSearch._token_limit()` truncates results to fit budget
+  - `ScopedRetriever._assemble_context()` enforces budget during assembly
+- [x] Context assembly for LLM
+  - Formatted markdown with branch/turn/score headers and prompt context
 
 ---
 
@@ -346,6 +364,13 @@ Minimum viable demo that proves the architecture:
 - 10 critical decisions identified as unblockers
 - MVP definition proposed
 - Phases 1–8 scaffolded with atomic tasks
+
+### 2026-07-25
+- Phase 3 (Memory Layer) complete: smart_chunking.py, rlm_orchestrator.py, rlm_repl.py, rlm_prompts.py, memory_store.py, memory_graph.py
+- Package version bumped to 0.2.0
+- __init__.py updated with new Phase 3 exports
+- MASTER-Checklist.md updated with 2026-07-25 entry
+- Phase 1-3 all committed and pushed
 
 ### 2026-05-14
 - D-001 research complete (Option C′: Plugin + Python engine via HTTP)

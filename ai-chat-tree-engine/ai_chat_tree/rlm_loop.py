@@ -75,8 +75,9 @@ class RLMEpisode:
 
 @dataclass
 class RLMLoopConfig:
-    """Configuration for the reasoning loop."""
-    config_path: Optional[str] = None
+    """Configuration for the RLM loop."""
+    max_depth: int = 4
+    timeout: int = 60
     default_model: str = "mistral-small3.2"
     models: List[Dict[str, Any]] = field(default_factory=lambda: [
         {"model_id": "primary", "provider": "ollama", "name": "mistral-small3.2",
@@ -199,6 +200,7 @@ class RLMLoop:
         self.config = config or RLMLoopConfig()
         self.episodes: List[RLMEpisode] = []
         self.reflections: List[RLMReflection] = []
+        self.reflection_log: List[RLMObservation] = []
 
     def add_observation(self, category: str, description: str, confidence: float = 1.0,
                        metadata: Optional[Dict] = None) -> RLMObservation:
