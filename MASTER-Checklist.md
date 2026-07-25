@@ -93,13 +93,12 @@ This is a **living document**. It grows with the project and is the single sourc
 - [x] Root `README.md`
 - [x] `.gitignore`
 - [x] `docs/D-001-execution-environment.md` — full analysis with Option C′ recommendation
-- [ ] `docs/rlm-system-prompts.md` — full RLM template + tool signatures
-- [ ] `docs/glossary.md` — define Trunk, Branch, Turn, Fruit, RLM, Fruit types unambiguously
-- [ ] `docs/roadmap.md` — public-facing roadmap (distinct from this internal checklist)
-- [ ] `docs/contributing.md`
+- [x] `docs/rlm-system-prompts.md` — full RLM template + tool signatures
+- [x] `docs/roadmap.md` — public-facing roadmap (distinct from this internal checklist)
+- [x] `docs/contributing.md`
 - [x] `LICENSE` file committed (MIT)
 - [x] `CHANGELOG.md` at repo root
-- [ ] GitHub repo `ai-chat-tree` initialized and first commit pushed
+- [x] GitHub repo `ai-chat-tree` initialized and first commit pushed
 - [x] `MASTER-Checklist.md` added to repo (this file)
 - [x] Project structure: `ai-chat-tree-engine/` and `ai-chat-tree-obsidian/` folders created
 
