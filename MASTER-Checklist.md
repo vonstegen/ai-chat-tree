@@ -115,27 +115,28 @@ This is a **living document**. It grows with the project and is the single sourc
 ## 🏗️ Phase 1 — Core Data Model & Storage
 
 ### Node Schema (v1.0)
-- [ ] Finalize Turn frontmatter schema
-  - Required: `type`, `id`, `timestamp`, `branch`, `parent_turn`, `model`, `success_score`, `tags`, `vector_id`
-  - Optional: `revision_of`, `revision_number`, `change_reason`, `source` (e.g. `imported`)
-- [ ] Trunk frontmatter schema
-- [ ] Branch index / metadata file schema
-- [ ] Fruit classification convention (script / image / terminal / diff / other)
+- [x] Finalize Turn frontmatter schema
+  - Required: `type`, `id`, `timestamp`, `branch`, `parent_turn`, `model`, `success_score`, `tags`, `vector_id` ✓
+  - Optional: `revision_of`, `revision_number`, `change_reason`, `source` ✓
+- [x] Trunk frontmatter schema
+- [x] Branch index / metadata file schema
+- [x] Fruit classification convention (script / image / terminal / diff / diagram / other)
 
 ### File System Operations
-- [ ] Create turn (atomic write + fruits folder scaffold)
-- [ ] Create branch (fork from turn)
-- [ ] Create revision node (immutable, links to original)
-- [ ] Attach fruit to turn
-- [ ] Read turn (markdown + frontmatter parse)
-- [ ] List nodes in branch
-- [ ] Ancestry walk (get_ancestors)
-- [ ] Children walk (get_children)
+- [x] Create turn (atomic write + fruits folder scaffold)
+- [x] Create branch (fork from turn)
+- [x] Create revision node (immutable, links to original)
+- [x] Attach fruit to turn
+- [x] Read turn (markdown + frontmatter parse)
+- [x] List nodes in branch
+- [x] Ancestry walk (get_ancestors)
+- [x] Children walk (get_children)
 
 ### Validation
-- [ ] Schema validator for all node types
-- [ ] Link integrity checker (no dangling wikilinks)
+- [x] Schema validator for all node types (Pydantic in `validation.py`)
+- [x] Link integrity checker (no dangling wikilinks) (`check_integrity()`)
 - [ ] CLI dry-run mode for all mutations
+  - **Status:** Not yet implemented — TODO item
 
 ---
 
@@ -168,11 +169,11 @@ This is a **living document**. It grows with the project and is the single sourc
 - [x] `<FINAL_ANSWER>` extraction contract
 
 ### Orchestration Loop
-- [ ] `rlm_generate_response()` entry point
-- [ ] `execute_rlm_session()` recursive driver
-- [ ] Code block extraction + safe execution
-- [ ] Final answer detection & exit
-- [ ] Error path back to LLM
+- [x] `rlm_generate_response()` entry point (in `rlm_orchestrator.py`)
+- [x] `execute_rlm_session()` recursive driver (in `rlm_orchestrator.py`)
+- [x] Code block extraction + safe execution (in `rlm_orchestrator.py`)
+- [x] Final answer detection & exit (`<FINAL_ANSWER>` in `rlm_orchestrator.py`)
+- [x] Error path back to LLM (in `rlm_orchestrator.py`)
 
 ---
 
