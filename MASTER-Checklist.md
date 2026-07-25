@@ -4,6 +4,7 @@
 
 **Project Status:** Phase 1 complete · Phase 2 complete · Phase 3 complete
 **Last Updated:** 2026-07-25
+**Version:** 0.2.0
 **Maintainer:** von Stegen
 **Repo:** `ai-chat-tree`
 
