@@ -15,7 +15,7 @@ from typing import Optional, Dict, List, Sequence
 from pathlib import Path
 
 
-# ─── Helper: unique ID generator ──────────────────────────
+# ─── Helper: unique ID generator ────────────────────────
 
 def new_id(prefix: str = "node") -> str:
     """Generate a unique ID. Format: prefix-YYYYMMDD-HHMMSS-XXXX"""
@@ -25,7 +25,7 @@ def new_id(prefix: str = "node") -> str:
     return f"{prefix}-{ts}-{suffix}"
 
 
-# ─── Node base class ──────────────────────────────────────
+# ─── Node base class ──────────────────────────────────
 
 class Node:
     """Immutable node base abstract class."""
@@ -49,7 +49,7 @@ class Node:
         raise NotImplementedError
 
 
-# ─── Turno ────────────────────────────────────────────────
+# ─── Turno ──────────────────────────────────────────────
 
 @dataclass
 class Turno(Node):
@@ -63,10 +63,12 @@ class Turno(Node):
     success_score: float = 0.0
     tags: List[str] = dataclass_field(default_factory=list)
     vector_id: Optional[str] = None
+    # Revision fields (D-010: inline linked node)
     revision_of: Optional[str] = None
     revision_number: int = 0
     change_reason: Optional[str] = None
     source: str = "manual"
+    parent_turn: Optional[str] = None  # FK to parent turn for ancestry walks
 
     def __post_init__(self):
         if not self.timestamp:
@@ -76,21 +78,19 @@ class Turno(Node):
 
     @property
     def node_type(self) -> str:
-        return "turno"
+        return "turn"
 
     @property
     def node_id(self) -> str:
         return self.id
 
     def to_dict(self) -> dict:
-        d = asdict(self)
-        # Convert dataclass fields that shouldn't leak
-        return d
+        return asdict(self)
 
     def to_markdown(self) -> str:
         fm_tags = ", ".join(self.tags)
         fm = f"""---
-type: turno
+type: turn
 id: {self.id}
 branch: {self.branch}
 model: {self.model}
@@ -102,6 +102,7 @@ revision_of: {self.revision_of or "null"}
 revision_number: {self.revision_number}
 change_reason: {self.change_reason or "null"}
 source: {self.source}
+parent_turn: {self.parent_turn or "null"}
 ---
 
 # Turno {self.id}
@@ -128,7 +129,7 @@ source: {self.source}
 
         def _get(key: str, default=None, is_list: bool = False):
             for line in fm.splitlines():
-                k, rest = line.lower(), line
+                k, rest = line, line
                 if rest.lower().startswith(key + ": "):
                     val = rest.split(": ", 1)[1].strip()
                     if val == "null":
@@ -162,6 +163,7 @@ source: {self.source}
             revision_number=_get("revision_number", 0),
             change_reason=_get("change_reason"),
             source=_get("source", "manual"),
+            parent_turn=_get("parent_turn"),
         )
 
     @classmethod
@@ -169,7 +171,7 @@ source: {self.source}
         return cls(**data)
 
 
-# ─── Brancho ──────────────────────────────────────────────
+# ─── Brancho ───────────────────────────────────────────────
 
 @dataclass
 class Brancho(Node):
@@ -177,6 +179,7 @@ class Brancho(Node):
     id: str
     name: str
     parent_turn: str = "trunk-001"
+    parent_turn_id: Optional[str] = None  # FK link to parent Turno
     created: str = ""
     model: str = "default"
     description: str = ""
@@ -188,7 +191,7 @@ class Brancho(Node):
 
     @property
     def node_type(self) -> str:
-        return "brancho"
+        return "branch"
 
     @property
     def node_id(self) -> str:
@@ -199,10 +202,11 @@ class Brancho(Node):
 
     def to_markdown(self) -> str:
         fm = f"""---
-type: brancho
+type: branch
 id: {self.id}
 name: {self.name}
 parent_turn: {self.parent_turn}
+parent_turn_id: {self.parent_turn_id or "null"}
 created: "{self.created}"
 model: {self.model}
 description: {self.description}
@@ -243,6 +247,7 @@ active: {self.active}
             id=_get("id", ""),
             name=_get("name", ""),
             parent_turn=_get("parent_turn", "trunk-001"),
+            parent_turn_id=_get("parent_turn_id"),
             created=_get("created", ""),
             model=_get("model", "default"),
             description=_get("description", ""),
@@ -254,9 +259,9 @@ active: {self.active}
         return cls(**data)
 
 
-# ─── Fruito ───────────────────────────────────────────────
+# ─── Fruito ─────────────────────────────────────────
 
-_fruito_types = ["script", "diff", "terminal", "diagram", "image", "text", "code"]
+_FRUIT_TYPES = ["script", "image", "terminal", "diff", "diagram", "other"]
 
 @dataclass
 class Fruito(Node):
@@ -265,8 +270,8 @@ class Fruito(Node):
     turno_id: str
     branch: str
     content: str = ""
-    file_path: Optional[str] = None
-    fruit_type: str = "text"
+    file_path: Optional[str] = None  # relative to turno_id/fruits/
+    fruit_type: str = "other"
     created: str = ""
     notes: str = ""
 
@@ -276,7 +281,7 @@ class Fruito(Node):
 
     @property
     def node_type(self) -> str:
-        return "fruits"
+        return "fruit"
 
     @property
     def node_id(self) -> str:
@@ -287,13 +292,13 @@ class Fruito(Node):
 
     def to_markdown(self) -> str:
         fm = f"""---
-type: fruits
+type: fruit
 id: {self.id}
 turno_id: {self.turno_id}
 branch: {self.branch}
 fruit_type: {self.fruit_type}
-created: "{self.created}"
 file_path: {self.file_path or "null"}
+created: "{self.created}"
 ---
 
 # Fruito {self.id}
@@ -305,7 +310,7 @@ file_path: {self.file_path or "null"}
 
 """
         if self.notes:
-            fm += f"## Notes\n{self.notes}"
+            fm += f"## Notes\n{self.notes}\n"
         return fm
 
     @classmethod
@@ -331,7 +336,7 @@ file_path: {self.file_path or "null"}
             branch=_get("branch", ""),
             content=_get("content", ""),
             file_path=_get("file_path"),
-            fruit_type=_get("fruit_type", "text"),
+            fruit_type=_get("fruit_type", "other"),
             created=_get("created", ""),
             notes=_get("notes", ""),
         )
@@ -341,24 +346,27 @@ file_path: {self.file_path or "null"}
         return cls(**data)
 
 
-# ─── Trunko ───────────────────────────────────────────────
+# ─── Trunko ─────────────────────────────────────────
 
 @dataclass
-class Trunko:
+class Trunko(Node):
     """A trunk — the root of a branch hierarchy."""
     id: str
     name: str
     created: str = ""
     description: str = ""
     turno_template: str = ""
+    branches: List[str] = dataclass_field(default_factory=list)  # list of branch ids
 
     def __post_init__(self):
         if not self.created:
             self.created = datetime.now(timezone.utc).isoformat()
+        if not self.branches:
+            self.branches = []
 
     @property
     def node_type(self) -> str:
-        return "trunoo"
+        return "trunk"
 
     @property
     def node_id(self) -> str:
@@ -368,12 +376,14 @@ class Trunko:
         return asdict(self)
 
     def to_markdown(self) -> str:
+        fm_branches = ", ".join(self.branches)
         fm = f"""---
-type: trunoo
+type: trunk
 id: {self.id}
 name: {self.name}
 created: "{self.created}"
-description: {self.description}
+description: {self.description or "null"}
+branches: [{fm_branches}]
 ---
 
 # Trunko {self.name} ({self.id})
@@ -382,7 +392,7 @@ description: {self.description}
 
 """
         if self.turno_template:
-            fm += f"## Turno Template\n\n{self.turno_template}"
+            fm += f"## Turno Template\n\n{self.turno_template}\n"
         return fm
 
     @classmethod
@@ -392,13 +402,15 @@ description: {self.description}
             raise ValueError("No frontmatter in trunoo file")
         fm: str = m.group(1)
 
-        def _get(key: str, default=None):
+        def _get(key: str, default=None, is_list: bool = False):
             for line in fm.splitlines():
                 rest = line
                 if rest.lower().startswith(key + ": "):
                     val = rest.split(": ", 1)[1].strip()
                     if val == "null":
                         return default
+                    if is_list:
+                        return [x.strip().strip("'\"") for x in val[1:-1].split(",")]
                     return val
             return default
 
@@ -406,8 +418,9 @@ description: {self.description}
             id=_get("id", ""),
             name=_get("name", ""),
             created=_get("created", ""),
-            description=_get("description", ""),
+            description=_get("description"),
             turno_template=_get("turno_template", ""),
+            branches=_get("branches", [], is_list=True),
         )
 
     @classmethod
