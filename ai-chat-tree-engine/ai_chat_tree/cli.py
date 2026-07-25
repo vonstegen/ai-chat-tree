@@ -328,6 +328,43 @@ def cmd_health(args: argparse.Namespace) -> None:
     print(f"  trunks: {len(trunks)}")
 
 
+# ─── Engine Serve ────────
+
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Start the FastAPI HTTP server."""
+    vault_root = args.vault or VAULT_DEFAULT
+    host = getattr(args, 'host', '0.0.0.0')
+    port = args.port
+    import threading, time, requests
+
+    def run_server():
+        from ai_chat_tree.engine import create_app
+        import uvicorn
+        app = create_app(vault_root)
+        uvicorn.run(app, host=host, port=port, log_level='info')
+
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+    print(f"Starting AI Chat Tree Engine on {host}:{port}...")
+
+    # Wait for server to be ready
+    for i in range(30):
+        time.sleep(0.5)
+        try:
+            r = requests.get(f"http://localhost:{port}/healthz", timeout=1)
+            if r.status_code == 200:
+                print(f"✓ Server ready at http://localhost:{port}")
+                print(f"  Vault: {vault_root}")
+                return
+        except requests.ConnectionError:
+            continue
+        except requests.exceptions.RequestException:
+            continue
+
+    print("⚠ Server may not be ready yet. Check logs.")
+
+
+
 # ─── Main ────────────────────────────────────────────────────────────
 
 def _parse_tags(tags_str: str) -> list[str]:
@@ -467,6 +504,12 @@ def main() -> None:
     # ── health ──
     cmd_health_parser = subparsers.add_parser('health', help='Print vault status')
     cmd_health_parser.set_defaults(func=cmd_health)
+
+    # ── serve ──
+    cmd_serve_parser = subparsers.add_parser('serve', help='Start the FastAPI HTTP server on a port')
+    cmd_serve_parser.add_argument('--host', '-H', default='0.0.0.0')
+    cmd_serve_parser.add_argument('--port', '-p', type=int, default=8765)
+    cmd_serve_parser.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
 

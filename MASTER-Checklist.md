@@ -226,27 +226,28 @@ This is a **living document**. It grows with the project and is the single sourc
 
 *Scope depends on D-001 + D-006. Split into plugin (4a) and standalone shell (4b, deferred).*
 
-### Phase 4a — Obsidian Plugin Shell (if Obsidian plugin)
-- [ ] `manifest.json`
-- [ ] Settings pane (LLM provider, API keys, embedding model, paths)
-- [ ] Command palette actions (new turn, new branch, run RLM, re-embed, import)
-- [ ] Status bar (embedding status, current branch, token usage)
+### Phase 4a — Obsidian Plugin Shell ✓ COMPLETE
 
-### Phase 4b — Standalone Tauri Shell (deferred)
-- [ ] Not in MVP scope — future work after plugin proves the concept
+> **Implemented.** Plugin shell, settings, commands, views, and engine serve all wired.
+
+- [x] `manifest.json`
+- [x] Settings pane (engine URL, API keys/secret, embedding model, vault path, model-per-branch config)
+- [x] Command palette actions (new turn, new branch, RLM regenerate, re-embed-all, import ChatGPT, import Claude)
+- [x] Status bar (engine healthz status, current branch icon)
+- [x] `engine serve` CLI command (daemon thread + health-check startup)
 
 ### Custom Views
-- [ ] Chat pane (center) — prompt input + streaming response + inline fruit preview
-- [ ] Family Tree sidebar — list/outline first, graph later
-- [ ] Right sidebar — node details, backlinks, fruits, revision history
+- [x] Chat pane — branch/mode dropdown selectors, prompt input, model switcher per branch, inline fruit preview per turn
+- [x] Family Tree sidebar — tree-tab.ts with expand/collapse, search, live highlighting
+- [ ] Right sidebar — node details, backlinks, fruits, revision history (deferred — requires Obsidian sidebar-pane API)
 - [ ] Branch comparison view (side-by-side)
 
 ### Interactions
-- [ ] One-click branch from any turn
-- [ ] One-click revise prompt → new linked node
-- [ ] Apply fruit to vault/file
-- [ ] Model switcher per branch
-- [ ] Feedback capture (thumbs, score)
+- [x] One-click branch from any turn (🌿 Branch button on each message)
+- [x] One-click revise prompt → new linked node (↻ Revise button)
+- [x] Apply fruit to vault/file (🍎 Fruit button with type picker)
+- [x] Model switcher per branch (model dropdown in header)
+- [x] Feedback capture (👍/🤔/👎 per turn with POST /turnos/{id}/score)
 
 ---
 

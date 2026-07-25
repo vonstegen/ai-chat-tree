@@ -1,3 +1,4 @@
+/* ═══════════ Chat Tree Plugin Layout ═══════════ */
 :chat-tree-plugin {
     display: flex;
     flex-direction: column;
@@ -11,14 +12,34 @@
     justify-content: space-between;
     padding: 8px 12px;
     border-bottom: 1px solid var(--background-modifier-border);
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.chat-tree-header .branch-selector {
+.chat-tree-header .branch-selector,
+.chat-tree-header .model-selector {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
+.chat-tree-header select {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.85em;
+    min-width: 100px;
+}
+
+.chat-tree-tree-toggle {
+    margin-left: auto;
+    padding: 4px 10px;
+    font-size: 0.85em;
+}
+
+/* ═══════════ Chat Body ═══════════ */
 .chat-tree-body {
     flex: 1;
     overflow-y: auto;
@@ -34,10 +55,12 @@
     gap: 12px;
 }
 
+/* ═══════════ Messages ═══════════ */
 .chat-tree-message {
     padding: 10px 14px;
     border-radius: 8px;
     max-width: 85%;
+    position: relative;
 }
 
 .chat-tree-message.user {
@@ -50,6 +73,17 @@
     align-self: flex-start;
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
+}
+
+.chat-tree-message.loading {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.chat-tree-message.error {
+    border-color: var(--text-error);
+    background: var(--text-error);
+    color: var(--text-on-accent);
 }
 
 .chat-tree-message .role {
@@ -69,13 +103,116 @@
     font-size: 0.65em;
     color: var(--text-muted);
     margin-top: 4px;
+    display: flex;
+    gap: 12px;
 }
 
+.chat-tree-message .meta .meta-model {
+    font-weight: 500;
+}
+
+.chat-tree-message .meta .meta-timestamp {
+    opacity: 0.7;
+}
+
+/* ═══════════ Turn Actions ═══════════ */
+.turn-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.feedback {
+    display: flex;
+    gap: 2px;
+    border-right: 1px solid var(--background-modifier-border);
+    padding-right: 6px;
+    margin-right: 2px;
+}
+
+.feedback-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9em;
+    padding: 2px;
+    border-radius: 3px;
+    transition: background 0.15s;
+}
+
+.feedback-btn:hover {
+    background: var(--background-modifier-hover);
+}
+
+.action-btn {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 0.75em;
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+
+.action-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* ═══════════ Fruits ═══════════ */
+.fruits-container {
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--background-primary);
+    border-radius: 6px;
+    border-left: 3px solid var(--text-accent);
+}
+
+.fruits-header {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.fruit-item {
+    padding: 6px 8px;
+    margin-top: 4px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.fruit-type {
+    font-size: 0.7em;
+    font-weight: 600;
+    color: var(--text-accent);
+    text-transform: uppercase;
+}
+
+.fruit-content {
+    font-size: 0.85em;
+    color: var(--text-normal);
+    margin-top: 2px;
+    white-space: pre-wrap;
+}
+
+.fruit-notes {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 2px;
+}
+
+/* ═══════════ Input Area ═══════════ */
 .chat-tree-input-area {
     display: flex;
     gap: 8px;
     padding: 12px;
     border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
 }
 
 .chat-tree-input-area textarea {
@@ -89,45 +226,7 @@
     font-size: var(--font-text-size);
 }
 
-.chat-tree-input-area button {
-    align-self: flex-end;
-    padding: 8px 16px;
-}
-
-.chat-tree-sidebar {
-    display: none;
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 240px;
-    height: 100%;
-    background: var(--background-primary);
-    border-left: 1px solid var(--background-modifier-border);
-    padding: 12px;
-    overflow-y: auto;
-}
-
-.chat-tree-branches {
-    list-style: none;
-    padding: 0;
-}
-
-.chat-tree-branches li {
-    padding: 4px 8px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.chat-tree-branches li:hover {
-    background: var(--background-modifier-hover);
-}
-
-.chat-tree-branches li.active {
-    background: var(--background-modifier-active);
-    font-weight: 600;
-}
-
-/* Tree view sidebar */
+/* ═══════════ Tree View Sidebar ═══════════ */
 .chat-tree-treeview {
     padding: 12px;
     font-size: 0.85em;
@@ -137,16 +236,75 @@
 
 .chat-tree-treeview .tree-node {
     margin-left: 16px;
-    padding: 2px 4px;
+    padding: 4px 6px;
     cursor: pointer;
     border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.1s;
 }
 
 .chat-tree-treeview .tree-node:hover {
     background: var(--background-modifier-hover);
 }
 
-/* Status bar */
+.chat-tree-treeview .tree-node.active {
+    background: var(--background-modifier-active);
+    font-weight: 600;
+}
+
+.chat-tree-treeview .trunk-node {
+    margin-left: 0;
+    font-weight: 600;
+    padding: 6px 8px;
+}
+
+/* ═══════════ Branch Comparison View ═══════════ */
+.branch-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    height: 100%;
+}
+
+.branch-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    overflow-y: auto;
+}
+
+/* ═══════════ Node Details Sidebar ═══════════ */
+.node-details-sidebar {
+    padding: 12px;
+    overflow-y: auto;
+    border-left: 1px solid var(--background-modifier-border);
+    width: 280px;
+}
+
+.node-details-sidebar h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.9em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 4px;
+}
+
+.node-details-sidebar .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 0.85em;
+}
+
+.node-details-sidebar .detail-label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ═══════════ Status Bar ═══════════ */
 .status-chat-tree {
     cursor: pointer;
     display: flex;
@@ -154,15 +312,21 @@
     gap: 4px;
 }
 
-/* Command palette */
-.search-result-container.chat-tree-search {
-    padding: 8px;
+.status-chat-tree:hover .chat-tree-status {
+    color: var(--text-normal);
 }
 
-.search-result-file-title {
-    font-size: 0.9em;
+/* ═══════════ Command Palette ═══════════ */
+.chat-tree-search {
+    padding: 0;
 }
 
-.search-result-file-match {
-    font-size: 0.8em;
+/* ═══════════ Loading / Error States ═══════════ */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.chat-tree-loading {
+    animation: pulse 1.5s infinite;
 }
